@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="api-endpoints" name="API Endpoint Map">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="API Endpoints" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="300" y="30" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Endpoint 1 -->
+        <mxCell id="ep1" value="POST /sessions/start" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;verticalAlign=top;fontFamily=Courier New;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="50" y="100" width="700" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="ep1-desc" value="Purpose: Start a new tutoring session&#xa;Input: { problem_id, student_id }&#xa;Output: { session_id, first_question }&#xa;What happens: Creates session record, tutor generates first Socratic question" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="60" y="130" width="680" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Endpoint 2 -->
+        <mxCell id="ep2" value="POST /sessions/{id}/turn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;fontFamily=Courier New;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="50" y="250" width="700" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="ep2-desc" value="Purpose: Submit student's answer, get next question&#xa;Input: { student_answer }&#xa;Output: { tutor_question, hints_used, session_status }&#xa;What happens: Saves student turn → Tutor drafts question → Verifier checks →&#xa;                If rejected, retry → Save approved question → Return to student" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="60" y="280" width="680" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Endpoint 3 -->
+        <mxCell id="ep3" value="GET /sessions/{id}/transcript" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;verticalAlign=top;fontFamily=Courier New;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="50" y="420" width="700" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="ep3-desc" value="Purpose: Get full conversation history&#xa;Output: { turns: [...], hints_given: [...], verifier_flags: [...] }&#xa;What happens: Fetches all turns from database in chronological order" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="60" y="450" width="680" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Endpoint 4 (PDF Feature) -->
+        <mxCell id="ep4" value="POST /documents/upload" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;verticalAlign=top;fontFamily=Courier New;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="50" y="570" width="700" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="ep4-desc" value="Purpose: Upload PDF for tutoring (BONUS FEATURE)&#xa;Input: { pdf_file, student_id }&#xa;Output: { document_id, status }&#xa;What happens: Extracts text, chunks it, generates embeddings, stores in vector DB" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="60" y="600" width="680" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Endpoint 5 (PDF Feature) -->
+        <mxCell id="ep5" value="POST /sessions/start-from-pdf" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;fontFamily=Courier New;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="50" y="720" width="700" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="ep5-desc" value="Purpose: Start session with PDF + student question (BONUS FEATURE)&#xa;Input: { document_id, question, student_id }&#xa;Output: { session_id, first_question }&#xa;What happens: Retrieves relevant PDF chunks, agents use them as context" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="60" y="750" width="680" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="Color Code:&#xa;Green = Session management&#xa;Yellow = Main conversation loop&#xa;Blue = Read-only data&#xa;Red/Purple = PDF feature (bonus)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=left;verticalAlign=top;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="50" y="880" width="300" height="100" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
