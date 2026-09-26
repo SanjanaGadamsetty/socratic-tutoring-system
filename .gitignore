@@ -47,3 +47,6 @@ dist/
 # Vector DB (ChromaDB)
 chroma_data/
 *.index
+
+# Claude Code session files
+.claude/
