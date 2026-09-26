@@ -50,3 +50,6 @@ chroma_data/
 
 # Claude Code session files
 .claude/
+
+# Uploaded files
+uploads/

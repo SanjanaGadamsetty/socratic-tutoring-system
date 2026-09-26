@@ -20,7 +20,11 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL not found in .env file!")
+    # Fallback to local SQLite for development
+    import pathlib
+    db_path = pathlib.Path(__file__).parent / "socratic_tutoring.db"
+    DATABASE_URL = f"sqlite:///{db_path}"
+    print(f"[DATABASE] Using local SQLite: {db_path}")
 
 # Create engine (the connection to the database)
 # echo=True means SQLAlchemy will print all SQL queries (helpful for learning!)

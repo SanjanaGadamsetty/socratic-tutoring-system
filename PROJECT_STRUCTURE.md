@@ -80,10 +80,15 @@ socratic-tutoring-system/
 │   ├── 05_langgraph_workflow_demo.py   # State machine (Day 5)
 │   └── 06_pdf_tutoring_demo.py   # PDF feature (bonus)
 │
-├── uploads/                      # File uploads (created at runtime)
-│   └── pdfs/                     # Uploaded PDF files
+├── database/                     # Database layer
+│   ├── __init__.py
+│   ├── models.py                 # SQLAlchemy ORM models (7 tables)
+│   ├── connection.py             # Database connection and session management
+│   ├── init_db.py                # Database initialization and seeding
+│   └── socratic_tutoring.db      # SQLite database (local development, gitignored)
 │
-└── socratic_tutoring.db          # SQLite database (local development)
+└── uploads/                      # File uploads (created at runtime, gitignored)
+    └── pdfs/                     # Uploaded PDF files
 ```
 
 ---

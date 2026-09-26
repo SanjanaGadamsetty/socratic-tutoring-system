@@ -86,7 +86,10 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env:
 # GROQ_API_KEY=your_key_here
-# DATABASE_URL=your_postgres_url (or leave empty for SQLite)
+# DATABASE_URL=your_postgres_url (for Supabase)
+# OR
+# DATABASE_URL=sqlite:///database/socratic_tutoring.db (for local SQLite)
+# OR leave empty to auto-use local SQLite
 ```
 
 4. **Initialize database:**
@@ -376,7 +379,7 @@ Post-submission ideas:
 
 - LangGraph workflow is parallel to Day 4 handoff (both work, choose one)
 - PDF verification is lighter than problem verification (by design)
-- Local SQLite for development, Supabase for production
+- Database file (`database/socratic_tutoring.db`) is gitignored - create with `python database/init_db.py`
 
 ---
 
