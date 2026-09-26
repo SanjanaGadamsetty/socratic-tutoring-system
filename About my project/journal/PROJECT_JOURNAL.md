@@ -1521,3 +1521,165 @@ Multi-Agent (Advanced):
 ## Next: Day 5 - LangGraph + Testing + Documentation
 
 Final day: State machines, comprehensive testing, and video demonstration.
+
+
+---
+
+# DAY 5: LANGGRAPH + TESTING + DOCUMENTATION
+
+**Date:** September 26, 2024
+**Focus:** State machine workflows, comprehensive testing, demo scripts, and documentation
+
+---
+
+## Step 1: LangGraph State Machine Implementation
+
+### What is LangGraph?
+
+**LangGraph = State machine framework for AI workflows**
+
+Think of it like a flowchart that executes.
+
+**Manual approach (Day 4):** Imperative - you control everything
+
+**LangGraph approach (Day 5):** Declarative - you define structure, graph handles execution
+
+---
+
+### Creating workflow.py
+
+**File created:** `app/agents/workflow.py`
+
+**Workflow Structure:**
+```
+START -> tutor_node -> verifier_node -> Decision
+If APPROVE: decision_node -> END
+If REJECT and retries: tutor_node (loop)
+If REJECT no retries: fallback_node -> END
+```
+
+---
+
+### Benefits of LangGraph
+
+1. Declarative - Define WHAT, not HOW
+2. Visual - Can export as diagram
+3. Debuggable - See which node failed
+4. Resumable - Save/load workflow state
+5. Professional - Industry standard pattern
+
+---
+
+## Step 2: PDF-Based Tutoring Feature (Bonus)
+
+**Problem:** Problem-based tutoring requires manually creating each problem.
+
+**Solution:** Let students upload PDFs and tutor from that content.
+
+### Database Changes
+
+- Added PDFDocument table
+- Updated Session table to support both problem_id and pdf_document_id
+
+### PDF Extraction Utility
+
+**File:** `app/utils/pdf_extractor.py`
+- Extracts text from all PDF pages
+- Cleans whitespace
+- Graceful error handling
+
+### PDF API Endpoints
+
+**File:** `app/api/pdfs.py`
+- POST /pdfs/upload
+- GET /pdfs
+- GET /pdfs/{id}
+- DELETE /pdfs/{id}
+
+### Agent Updates
+
+- Modified tutor_agent.py to support PDF content
+- Modified handoff.py for dual mode (problem/PDF)
+- Lighter verification for PDF mode
+
+---
+
+## Step 3: Comprehensive Test Suite
+
+**Test files created:**
+- tests/test_day5_langgraph.py
+- tests/test_pdf_extraction.py
+- tests/test_pdf_tutoring.py
+- tests/test_comprehensive_scenarios.py
+
+---
+
+## Step 4: Interactive Demo Scripts
+
+**Created demos/ folder with 6 standalone demos:**
+1. 01_happy_path_demo.py
+2. 02_verifier_rejection_demo.py
+3. 03_tool_failure_demo.py
+4. 04_multi_agent_architecture.py (MOST IMPORTANT)
+5. 05_langgraph_workflow_demo.py
+6. 06_pdf_tutoring_demo.py
+
+---
+
+## Step 5: Documentation
+
+**Created:**
+1. VIDEO_SCRIPT.md (in docs/) - 45-50 minute recording guide
+2. PROJECT_STRUCTURE.md - Complete organization reference
+3. demos/README.md - Demo usage guide
+
+---
+
+## Project Statistics After Day 5:
+
+**Code metrics:**
+- Total lines: 6,530+
+- Python files: 45+
+- Test files: 9
+- Demo scripts: 6
+- API endpoints: 15+
+- Database tables: 7
+
+**Time investment:**
+- Day 1: 8 hours
+- Day 2: 8 hours
+- Day 3: 8 hours
+- Day 4: 10 hours
+- Day 5: 12 hours
+- Total: 46 hours
+
+---
+
+## Key Achievements:
+
+✓ Multi-agent architecture - Tutor + Verifier + Handoff
+✓ Quality control - Retry with feedback
+✓ State machine - LangGraph workflow
+✓ PDF feature - Document-based tutoring (bonus)
+✓ Comprehensive testing - 9 test files, 6 demos
+✓ Complete documentation - Video script, structure, journal
+✓ Production patterns - Error handling, persistence, streaming
+✓ Socratic method - Never reveals answers
+
+---
+
+## Ready for Submission:
+
+✅ 1. End-to-end working project - DONE
+⏳ 2. 3-page architecture document - TODO
+⏳ 3. YouTube video (30+ min) - TODO
+
+**Deadline:** Sunday 6:00 PM
+
+**Project Status:** 95% COMPLETE!
+
+Just documentation and video remaining!
+
+---
+
+**End of Day 5 Journal**
