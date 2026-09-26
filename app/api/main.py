@@ -29,6 +29,7 @@ from database.connection import get_db
 from app.agent import TutoringAgent
 from app.api.streaming import router as streaming_router
 from app.api.jobs import router as jobs_router
+from app.api.pdfs import router as pdfs_router
 
 
 # Create FastAPI app
@@ -52,6 +53,9 @@ app.include_router(streaming_router, tags=["Streaming"])
 
 # Include jobs router (Day 3 - Background jobs)
 app.include_router(jobs_router, tags=["Background Jobs"])
+
+# Include PDFs router (PDF Feature)
+app.include_router(pdfs_router, tags=["PDF Documents"])
 
 
 # ===== ENDPOINT 1: GET /problems =====

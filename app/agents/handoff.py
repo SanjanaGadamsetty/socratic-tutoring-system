@@ -46,19 +46,21 @@ class HandoffController:
 
     def process_student_input(
         self,
-        problem_text: str,
-        correct_answer: str,
         student_response: str,
-        conversation_history: str = ""
+        conversation_history: str = "",
+        problem_text: str = None,
+        correct_answer: str = None,
+        pdf_content: str = None
     ) -> Dict[str, Any]:
         """
         Process student input through tutor-verifier loop.
 
         Args:
-            problem_text: The problem being solved
-            correct_answer: The correct answer (not shown to student)
             student_response: What the student just said
             conversation_history: Previous conversation turns
+            problem_text: The problem being solved (optional for PDF sessions)
+            correct_answer: The correct answer (optional for PDF sessions)
+            pdf_content: PDF text content (optional, for PDF-based tutoring)
 
         Returns:
             Dictionary with:
@@ -72,15 +74,24 @@ class HandoffController:
 
         print("\n" + "="*60)
         print("[HandoffController] Starting tutor-verifier loop")
+        if pdf_content:
+            print("[Mode] PDF-based tutoring")
+        else:
+            print("[Mode] Problem-based tutoring")
         print("="*60)
 
         # Build context for tutor
         context = {
-            "problem_text": problem_text,
-            "correct_answer": correct_answer,
             "student_last_response": student_response,
             "conversation_history": conversation_history
         }
+
+        # Add problem-specific or PDF-specific context
+        if pdf_content:
+            context["pdf_content"] = pdf_content
+        else:
+            context["problem_text"] = problem_text
+            context["correct_answer"] = correct_answer
 
         # Retry loop
         for attempt in range(1, self.max_retries + 1):
@@ -93,11 +104,29 @@ class HandoffController:
 
             # STEP 2: Verifier checks response
             print("\n[2/2] Verifier checking response...")
-            verification = self.verifier.verify(
-                tutor_response=tutor_response,
-                problem_text=problem_text,
-                correct_answer=correct_answer
-            )
+
+            # For PDF sessions, skip strict verification (no specific answer to check)
+            if pdf_content:
+                # Light verification - just check if it's asking questions
+                if "?" in tutor_response:
+                    verification = {
+                        "decision": "APPROVE",
+                        "reason": "PDF-based tutoring - tutor is asking guiding questions",
+                        "leaked_info": ""
+                    }
+                else:
+                    verification = {
+                        "decision": "REJECT",
+                        "reason": "Not asking questions - should use Socratic method",
+                        "leaked_info": ""
+                    }
+            else:
+                # Problem-based: strict verification
+                verification = self.verifier.verify(
+                    tutor_response=tutor_response,
+                    problem_text=problem_text,
+                    correct_answer=correct_answer
+                )
 
             verifications.append({
                 "attempt": attempt,

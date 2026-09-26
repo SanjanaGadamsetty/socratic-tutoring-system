@@ -77,11 +77,13 @@ class Session(Base):
     """
     Tracks each tutoring session.
     One student working on one problem = one session.
+    Can optionally be linked to a PDF document for PDF-based tutoring.
     """
     __tablename__ = "sessions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    problem_id = Column(Integer, ForeignKey("problems.id"), nullable=False)
+    problem_id = Column(Integer, ForeignKey("problems.id"), nullable=True)  # Now optional for PDF sessions
+    pdf_document_id = Column(Integer, ForeignKey("pdf_documents.id"), nullable=True)  # Link to PDF
     student_id = Column(String(100), nullable=False)  # Could be user ID or name
     status = Column(SQLEnum(SessionStatus), default=SessionStatus.STARTED)
     started_at = Column(DateTime, default=datetime.utcnow)
@@ -89,6 +91,7 @@ class Session(Base):
 
     # Relationships
     problem = relationship("Problem", back_populates="sessions")
+    pdf_document = relationship("PDFDocument", back_populates="sessions")
     turns = relationship("Turn", back_populates="session", cascade="all, delete-orphan")
     hints_given = relationship("HintGiven", back_populates="session", cascade="all, delete-orphan")
     verifier_flags = relationship("VerifierFlag", back_populates="session", cascade="all, delete-orphan")
@@ -199,6 +202,31 @@ class Job(Base):
 
     def __repr__(self):
         return f"<Job(id={self.id}, type='{self.job_type}', status={self.status.value})>"
+
+
+# ===== TABLE 7: PDF DOCUMENTS (PDF Feature) =====
+class PDFDocument(Base):
+    """
+    Stores uploaded PDF documents for PDF-based tutoring.
+    Students can upload PDFs and tutor asks questions from the content.
+    """
+    __tablename__ = "pdf_documents"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String(255), nullable=False)
+    original_filename = Column(String(255), nullable=False)  # User's original filename
+    file_path = Column(String(500), nullable=False)  # Where PDF is stored
+    extracted_text = Column(Text, nullable=True)  # Extracted text content
+    page_count = Column(Integer, nullable=True)
+    file_size = Column(Integer, nullable=True)  # Size in bytes
+    uploaded_by = Column(String(100), nullable=False)  # Student ID
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    sessions = relationship("Session", back_populates="pdf_document")
+
+    def __repr__(self):
+        return f"<PDFDocument(id={self.id}, filename='{self.filename}', pages={self.page_count})>"
 
 
 # ===== EXPLANATION OF KEY CONCEPTS =====

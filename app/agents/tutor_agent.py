@@ -44,10 +44,11 @@ class TutorAgent:
 
         Args:
             context: Dictionary containing:
-                - problem_text: The problem being solved
-                - correct_answer: The correct answer (agent must not reveal)
+                - problem_text: The problem being solved (optional if pdf_content provided)
+                - correct_answer: The correct answer (agent must not reveal) (optional for PDF)
                 - conversation_history: Previous turns
                 - student_last_response: What student just said
+                - pdf_content: PDF text content (optional, for PDF-based tutoring)
 
         Returns:
             Socratic question/guidance (string)
@@ -63,7 +64,21 @@ CRITICAL RULES:
 5. Encourage student reasoning
 6. Keep responses concise (2-3 sentences max)"""
 
-        user_prompt = f"""Problem: {context['problem_text']}
+        # Check if this is PDF-based or problem-based tutoring
+        if 'pdf_content' in context and context['pdf_content']:
+            # PDF-based tutoring
+            user_prompt = f"""PDF Content (Study Material):
+{context['pdf_content'][:2000]}...  (truncated for context)
+
+Previous conversation:
+{context.get('conversation_history', 'No previous conversation')}
+
+Student just said: {context['student_last_response']}
+
+Generate your next Socratic question based on the PDF content. Help the student understand the concepts from the material through guided questioning. Remember: ASK questions, don't give direct answers from the text."""
+        else:
+            # Problem-based tutoring
+            user_prompt = f"""Problem: {context['problem_text']}
 Correct Answer (DO NOT REVEAL THIS): {context['correct_answer']}
 
 Previous conversation:
