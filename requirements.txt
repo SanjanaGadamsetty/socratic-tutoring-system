@@ -10,10 +10,10 @@ fastapi>=0.104
 uvicorn>=0.24
 sse-starlette>=1.8
 
-# ===== DAY 4 - LangChain (add later) =====
-# langchain
-# langchain-groq
-# langgraph
+# ===== DAY 4 - LangChain =====
+langchain>=0.3.0
+langchain-groq>=1.1.0
+langchain-community>=0.3.0
 
 # ===== BONUS - PDF processing (add later) =====
 # pypdf2
