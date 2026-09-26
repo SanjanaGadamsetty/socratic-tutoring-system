@@ -28,6 +28,7 @@ from database.models import (
 from database.connection import get_db
 from app.agent import TutoringAgent
 from app.api.streaming import router as streaming_router
+from app.api.jobs import router as jobs_router
 
 
 # Create FastAPI app
@@ -48,6 +49,9 @@ app.add_middleware(
 
 # Include streaming router
 app.include_router(streaming_router, tags=["Streaming"])
+
+# Include jobs router (Day 3 - Background jobs)
+app.include_router(jobs_router, tags=["Background Jobs"])
 
 
 # ===== ENDPOINT 1: GET /problems =====

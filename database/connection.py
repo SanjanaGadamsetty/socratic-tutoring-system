@@ -2,7 +2,7 @@
 Database connection management.
 
 This file handles:
-- Creating the database engine (connection to SQLite)
+- Creating the database engine (connection to Supabase PostgreSQL)
 - Creating sessions (for querying/inserting data)
 - Providing easy access to the database
 """
@@ -11,17 +11,25 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
 
-# Database file path (SQLite stores everything in one file)
-DATABASE_URL = "sqlite:///./socratic_tutoring.db"
+# Get database URL from environment
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL not found in .env file!")
 
 # Create engine (the connection to the database)
 # echo=True means SQLAlchemy will print all SQL queries (helpful for learning!)
 engine = create_engine(
     DATABASE_URL,
     echo=False,  # Set to True to see SQL queries
-    connect_args={"check_same_thread": False}  # Needed for SQLite threading
+    pool_pre_ping=True,  # Verify connections before using
+    pool_size=10,  # Connection pool size
+    max_overflow=20  # Extra connections if needed
 )
 
 # Session factory (creates new database sessions)

@@ -887,3 +887,349 @@ socratic_tutoring.db (SQLite)
 3. Stay on agent improvements - Enhance current agent before adding complexity
 
 **Recommended:** Go to Day 4 (Multi-agent layer) - This is the core AI deliverable.
+---
+
+## DAY 3: Durable Execution [COMPLETE]
+
+Building background job system for reliable long-running operations.
+
+---
+
+### Step 15: Job Model and Database [COMPLETE]
+
+Created Job table for tracking background operations.
+
+**File updated:**
+- `database/models.py` - Added Job model and JobStatus enum
+
+**Job model fields:**
+```
+Job Table:
+    - id (primary key)
+    - job_type (start_session, submit_turn)
+    - status (queued, running, completed, failed, cancelled)
+    - idempotency_key (prevent duplicates)
+    - input_data (JSON of request)
+    - result_data (JSON of response)
+    - error_message (if failed)
+    - retry_count / max_retries
+    - timestamps (created, started, completed)
+    - worker_id / last_heartbeat (for monitoring)
+```
+
+**Flow Diagram - Job Lifecycle:**
+```
+Job Created
+    |
+    | status = QUEUED
+    v
+Waiting in Queue
+    |
+    | Worker picks up
+    v
+status = RUNNING
+    |
+    | Worker processes
+    v
+Success?
+    |
+    |-- YES -> status = COMPLETED
+    |          result_data = {...}
+    |
+    |-- NO -> retry_count++
+                |
+                |-- retry_count < max_retries
+                |   status = QUEUED (try again)
+                |
+                |-- retry_count >= max_retries
+                    status = FAILED
+                    error_message = "..."
+```
+
+---
+
+### Step 16: Background Worker [COMPLETE]
+
+Built worker process to execute jobs asynchronously.
+
+**File created:**
+- `app/worker.py` - Worker that polls and processes jobs
+
+**Worker features:**
+1. Polls database for queued jobs
+2. Processes jobs based on type
+3. Updates job status in real-time
+4. Implements retry logic
+5. Handles stuck jobs (heartbeat timeout)
+
+**Flow Diagram - Worker Operation:**
+```
+Worker starts
+    |
+    v
+Poll database for jobs
+    |
+    |-- No jobs? Sleep 2 seconds, poll again
+    |
+    |-- Found job? Process it
+        |
+        v
+    Update: status = RUNNING
+        |
+        v
+    Execute job logic (call agent)
+        |
+        v
+    Success?
+        |
+        |-- YES: Update status = COMPLETED
+        |         Save result_data
+        |
+        |-- NO: Check retry_count
+                |
+                |-- Can retry: status = QUEUED
+                |
+                |-- Max retries: status = FAILED
+        |
+        v
+    Continue polling
+```
+
+**Worker recovery mechanisms:**
+```
+Heartbeat Timeout Detection:
+
+Job stuck in RUNNING for 5+ minutes?
+    |
+    v
+Considered orphaned (worker crashed?)
+    |
+    v
+Another worker can pick it up
+    |
+    v
+Reprocess job
+```
+
+---
+
+### Step 17: Job API Endpoints [COMPLETE]
+
+Created async API endpoints for job management.
+
+**File created:**
+- `app/api/jobs.py` - Job creation and status endpoints
+
+**Endpoints:**
+```
+POST /jobs/sessions/start
+    Input: {problem_id, student_id}
+    Output: {job_id, status: "queued"}
+    Response: 202 Accepted (immediate)
+
+POST /jobs/sessions/{id}/turn
+    Input: {student_answer}
+    Output: {job_id, status: "queued"}
+    Response: 202 Accepted (immediate)
+
+GET /jobs/{job_id}
+    Output: {status, result, error, retry_count}
+    Poll this to check completion
+
+POST /jobs/{job_id}/cancel
+    Cancel a queued job
+
+GET /jobs
+    List recent jobs
+```
+
+**Idempotency implementation:**
+```
+Client sends idempotency_key
+    |
+    v
+Server checks: Does job with this key exist?
+    |
+    |-- YES: Return existing job (no duplicate)
+    |
+    |-- NO: Create new job
+```
+
+**Why idempotency matters:**
+```
+Without:
+    User clicks "Start Session" twice (slow network)
+        |
+        v
+    2 sessions created (bug!)
+
+With idempotency:
+    User clicks "Start Session" twice
+        |
+        | Same idempotency_key sent
+        v
+    First click: Create job 1
+    Second click: Return job 1 (no duplicate)
+        |
+        v
+    Only 1 session created (correct!)
+```
+
+---
+
+### Step 18: Testing and Validation [COMPLETE]
+
+Created comprehensive test demonstrating all Day 3 features.
+
+**Test file:**
+- `test_day3.py` - Async job system test
+
+**Test demonstrates:**
+```
+Test 1: Job Creation
+    - POST to /jobs/sessions/start
+    - Returns 202 Accepted immediately
+    - Job ID returned
+    - Status: queued
+
+Test 2: Idempotency
+    - Send same request twice
+    - Same job_id returned
+    - No duplicate created
+
+Test 3: Status Polling
+    - Poll GET /jobs/{id} every 2 seconds
+    - Watch status change: queued -> running -> completed
+    - Retrieve final result
+
+Test 4: List Jobs
+    - GET /jobs?limit=5
+    - See all recent jobs
+```
+
+**Complete flow diagram:**
+```
+                ASYNC JOB FLOW
+
+Terminal 1: API Server
+    |
+    | Receives POST /jobs/sessions/start
+    v
+Create job in database (status=QUEUED)
+    |
+    | Return 202 Accepted
+    v
+Client has job_id
+
+Terminal 2: Background Worker
+    |
+    | Polls database every 2s
+    v
+Found job with status=QUEUED
+    |
+    | Pick it up
+    v
+Update status=RUNNING
+    |
+    | Call agent (takes 10 seconds)
+    v
+Agent generates response
+    |
+    | Save result
+    v
+Update status=COMPLETED
+
+Terminal 3: Client Polling
+    |
+    | GET /jobs/{id} every 2s
+    v
+status=queued... queued... running... running... completed!
+    |
+    | Got result
+    v
+Display to user
+```
+
+---
+
+## DAY 3 COMPLETE
+
+**What we built:**
+- [x] Job table in database
+- [x] Background worker process
+- [x] Job status state machine
+- [x] Retry logic (max 3 attempts)
+- [x] Idempotency (duplicate prevention)
+- [x] Job cancellation
+- [x] Orphaned job detection (heartbeat timeout)
+- [x] Job polling endpoints
+- [x] Complete test suite
+
+**Day 3 checkpoint met:** Run same job twice, no duplicate side effects. Stuck jobs get reaped.
+
+**Key learnings:**
+```
+Why async jobs?
+    - Immediate response (user doesn't wait)
+    - Reliability (survives crashes)
+    - Retry automatically (handles transient failures)
+    - Prevents duplicates (idempotency)
+
+When to use:
+    - Long operations (30+ seconds)
+    - Operations that might fail temporarily
+    - High-traffic production systems
+
+When NOT needed:
+    - Fast operations (5-10 seconds)
+    - Demo/development environments
+    - Low traffic
+```
+
+**Architecture after Day 3:**
+```
+                COMPLETE ASYNC SYSTEM
+
+    +------------------+
+    |     Client       |
+    +------------------+
+            |
+            | POST /jobs/... (immediate)
+            v
+    +------------------+
+    |   FastAPI        |
+    | (Job creation)   |
+    +------------------+
+            |
+            | INSERT job
+            v
+    +------------------+
+    |  Supabase DB     |
+    |  jobs table      |
+    +------------------+
+            |
+            | Worker polls
+            v
+    +------------------+
+    | Background       |
+    | Worker           |
+    +------------------+
+            |
+            | Calls agent
+            v
+    +------------------+
+    | Tutoring Agent   |
+    +------------------+
+            |
+            | Calls LLM
+            v
+    +------------------+
+    |   Groq API       |
+    +------------------+
+```
+
+---
+
+## Next: Day 4 - Multi-Agent Layer (CORE REQUIREMENT)
+
+This is the most important day - building Tutor + Verifier agents with handoff pattern.

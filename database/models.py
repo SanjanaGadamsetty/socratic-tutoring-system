@@ -40,6 +40,15 @@ class Speaker(enum.Enum):
     STUDENT = "student"
 
 
+class JobStatus(enum.Enum):
+    """Status of background jobs"""
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
 # ===== TABLE 1: PROBLEMS =====
 class Problem(Base):
     """
@@ -153,6 +162,43 @@ class VerifierFlag(Base):
 
     def __repr__(self):
         return f"<VerifierFlag(id={self.id}, session={self.session_id}, reason='{self.reason[:30]}...')>"
+
+
+# ===== TABLE 6: JOBS (Day 3) =====
+class Job(Base):
+    """
+    Background job tracking for durable execution.
+    Handles long-running agent operations.
+    """
+    __tablename__ = "jobs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_type = Column(String(100), nullable=False)  # e.g., "start_session", "submit_turn"
+    status = Column(SQLEnum(JobStatus), default=JobStatus.QUEUED)
+    idempotency_key = Column(String(255), unique=True, nullable=True)  # Prevent duplicates
+
+    # Input data (JSON)
+    input_data = Column(Text, nullable=False)  # JSON string
+
+    # Output data (JSON)
+    result_data = Column(Text, nullable=True)  # JSON string
+    error_message = Column(Text, nullable=True)
+
+    # Retry tracking
+    retry_count = Column(Integer, default=0)
+    max_retries = Column(Integer, default=3)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # Worker tracking (optional - for heartbeat)
+    worker_id = Column(String(100), nullable=True)
+    last_heartbeat = Column(DateTime, nullable=True)
+
+    def __repr__(self):
+        return f"<Job(id={self.id}, type='{self.job_type}', status={self.status.value})>"
 
 
 # ===== EXPLANATION OF KEY CONCEPTS =====
