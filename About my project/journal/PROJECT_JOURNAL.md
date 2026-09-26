@@ -517,6 +517,373 @@ FINAL DELIVERABLES
 
 ---
 
-## Next: Day 2 - Database & API Layer
+---
 
-Ready to start whenever you are.
+## DAY 2: Database & API Layer [COMPLETE]
+
+Building the persistence and HTTP service layers.
+
+---
+
+### Step 11: Database Setup [COMPLETE]
+
+Created SQLite database with SQLAlchemy ORM.
+
+**Files created:**
+- `database/models.py` - 5 table models (Problem, Session, Turn, HintGiven, VerifierFlag)
+- `database/connection.py` - Database engine and session management
+- `database/init_db.py` - Initialization script with seed data
+
+**Flow Diagram - Database Architecture:**
+```
+SQLAlchemy ORM Models (Python Classes)
+    |
+    | Base.metadata.create_all()
+    v
+SQLite Database File (socratic_tutoring.db)
+    |
+    +-- problems (7 sample rows)
+    +-- sessions (empty, ready for data)
+    +-- turns (empty)
+    +-- hints_given (empty)
+    +-- verifier_flags (empty)
+
+Table Relationships:
+    Problem (1) ----< (Many) Session
+    Session (1) ----< (Many) Turn
+    Session (1) ----< (Many) HintGiven
+    Session (1) ----< (Many) VerifierFlag
+    Turn (1) ----< (Many) VerifierFlag
+```
+
+**Key concepts learned:**
+- ORM maps Python classes to database tables
+- Relationships provide navigation between tables
+- Cascade deletes clean up related data automatically
+
+**Database initialization flow:**
+```
+Run: python database/init_db.py
+    |
+    v
+Create all tables from models
+    |
+    v
+Check if problems exist
+    |
+    |-- Exist? Skip seeding
+    |
+    |-- Empty? Seed 7 sample problems
+    v
+Database ready for use
+```
+
+---
+
+### Step 12: API Layer with FastAPI [COMPLETE]
+
+Built HTTP API to expose tutoring system.
+
+**Files created:**
+- `app/api/schemas.py` - Pydantic request/response models
+- `app/api/main.py` - FastAPI application with 4 endpoints
+- `app/api/streaming.py` - SSE streaming endpoint
+
+**API Endpoints:**
+```
+GET /
+    Purpose: Health check
+    Response: {"status": "online", ...}
+
+GET /problems
+    Purpose: List all available problems
+    Response: {"problems": [...], "total": 7}
+
+POST /sessions/start
+    Input: {"problem_id": 1, "student_id": "alice"}
+    Process: Create session + Generate first question
+    Response: {"session_id": 1, "first_question": "..."}
+
+POST /sessions/{id}/turn
+    Input: {"student_answer": "120"}
+    Process: Save turn + Check correctness + Generate next question
+    Response: {"tutor_question": "...", "is_correct": true/false}
+
+GET /sessions/{id}/transcript
+    Purpose: Get full conversation history
+    Response: {"turns": [...], "hints_given": [...], "verifier_flags": [...]}
+```
+
+**Flow Diagram - API Request Cycle:**
+```
+Client sends HTTP POST /sessions/start
+    |
+    | Body: {"problem_id": 1, "student_id": "alice"}
+    v
+FastAPI validates against SessionStartRequest schema
+    |
+    |-- Invalid? Return 400 with validation errors
+    |
+    |-- Valid? Continue
+    v
+Dependency injection: get_db() provides database session
+    |
+    v
+Endpoint function executes:
+    |
+    +-- Query problem from database
+    |
+    +-- Create new session record
+    |
+    +-- Call agent to generate first question
+    |
+    +-- Save tutor turn to database
+    |
+    +-- Build SessionStartResponse
+    v
+FastAPI serializes response to JSON
+    |
+    v
+Client receives: {"session_id": 1, "first_question": "..."}
+    |
+    v
+Database session automatically closed
+```
+
+**Key concepts learned:**
+- Pydantic validates input/output automatically
+- Dependency injection manages database connections
+- FastAPI auto-generates API documentation
+- Response models ensure type safety
+
+---
+
+### Step 13: Server-Sent Events (SSE) Streaming [COMPLETE]
+
+Added real-time streaming to watch agent think.
+
+**File created:**
+- `app/api/streaming.py` - SSE implementation
+
+**Flow Diagram - SSE Streaming:**
+```
+Client opens SSE connection: POST /sessions/{id}/turn/stream
+    |
+    v
+Server starts async generator
+    |
+    v
+yield {"type": "status", "message": "Initializing..."}
+    |
+    | Client receives event, updates UI
+    v
+yield {"type": "thinking", "message": "Agent is thinking..."}
+    |
+    | Client shows loading indicator
+    v
+yield {"type": "tool_call", "tool": "calculator", "args": {...}}
+    |
+    | Client shows "Using calculator..."
+    v
+yield {"type": "tool_result", "result": {"success": true, "result": 120}}
+    |
+    | Client displays tool result
+    v
+yield {"type": "response", "message": "Final agent response"}
+    |
+    | Client displays agent's question
+    v
+yield {"type": "complete"}
+    |
+    v
+Connection closes
+```
+
+**Why SSE vs WebSockets?**
+```
+SSE (Server-Sent Events):
+    - One-way: Server to Client only
+    - HTTP-based, simpler setup
+    - Auto-reconnects
+    - Perfect for: Progress updates, notifications, streaming responses
+
+WebSockets:
+    - Two-way: Bidirectional communication
+    - More complex protocol
+    - Better for: Chat apps, gaming, real-time collaboration
+
+Our use case: Server sends progress updates to client
+Choice: SSE (simpler, fits perfectly)
+```
+
+**Streaming vs Non-Streaming comparison:**
+```
+Without Streaming:
+    Client: "Start session"
+    [5 seconds of waiting...]
+    Server: "Here's the response"
+    
+    User sees: Loading spinner for 5 seconds, then response
+
+With Streaming:
+    Client: "Start session"
+    Server: "Status: Initializing..." (0.1s)
+    Server: "Agent thinking..." (1s)
+    Server: "Using calculator..." (2s)
+    Server: "Tool result: 120" (2.5s)
+    Server: "Final response" (5s)
+    
+    User sees: Live updates, understands what's happening
+```
+
+---
+
+### Step 14: Testing & Validation [COMPLETE]
+
+Created test scripts to verify all functionality.
+
+**Test files:**
+- `test_api.py` - Tests all standard endpoints
+- `test_streaming.py` - Tests SSE streaming
+
+**Test results:**
+```
+Standard API Tests:
+    [PASS] Health check (GET /)
+    [PASS] List problems (GET /problems) - Found 7 problems
+    [PASS] Start session (POST /sessions/start) - Session ID: 1
+    [PASS] Submit turn (POST /sessions/{id}/turn) - Got response
+    [PASS] Get transcript (GET /sessions/{id}/transcript) - 3 turns
+
+SSE Streaming Test:
+    [PASS] Connection established
+    [PASS] Received status events
+    [PASS] Received thinking events
+    [PASS] Received final response
+    [PASS] Stream completed successfully
+```
+
+**Complete system flow:**
+```
+Student -> API -> Database -> Agent -> Tools -> LLM
+   ^                                              |
+   |                                              v
+   +-------- Response with question  <-----------+
+
+Detailed Flow:
+1. Student calls POST /sessions/start
+2. API creates session in database
+3. API calls agent with problem context
+4. Agent generates system prompt
+5. Agent calls Groq LLM
+6. LLM may request tool use
+7. Agent executes tool (e.g., calculator)
+8. Agent gets result, continues thinking
+9. Agent generates Socratic question
+10. API saves turn to database
+11. API returns question to student
+```
+
+---
+
+## DAY 2 COMPLETE
+
+**What we built:**
+- [x] SQLite database with 5 tables
+- [x] SQLAlchemy ORM models
+- [x] Database seeding (7 sample problems)
+- [x] FastAPI application
+- [x] 4 API endpoints (health, list, start, turn, transcript)
+- [x] Pydantic request/response validation
+- [x] SSE streaming for real-time updates
+- [x] Incremental persistence (saves after each turn)
+- [x] Complete integration tests
+
+**Day 2 checkpoint met:** HTTP API backed by database, with SSE streaming tool events.
+
+**Database Schema Visualization:**
+```
+socratic_tutoring.db (SQLite)
+|
++-- problems
+|   - Stores tutoring problems
+|   - 7 sample problems loaded
+|
++-- sessions
+|   - Tracks tutoring sessions
+|   - Links to problem
+|   - Has status (started/in_progress/completed/abandoned)
+|
++-- turns
+|   - Each conversation exchange
+|   - Links to session
+|   - Speaker: tutor or student
+|
++-- hints_given
+|   - Tracks hint escalation
+|   - Links to session
+|   - Levels 1-3
+|
++-- verifier_flags
+    - When verifier rejects tutor
+    - Links to session and turn
+    - Stores rejection reason
+```
+
+**Architecture After Day 2:**
+```
+                COMPLETE SYSTEM ARCHITECTURE
+                
+    +--------------------------------------------------+
+    |                   CLIENT                         |
+    |            (Postman / curl / Frontend)           |
+    +--------------------------------------------------+
+                        |
+                        | HTTP Request
+                        v
+    +--------------------------------------------------+
+    |               FASTAPI SERVER                     |
+    |                                                  |
+    |  Endpoints:                                      |
+    |  - GET /problems                                 |
+    |  - POST /sessions/start                          |
+    |  - POST /sessions/{id}/turn                      |
+    |  - GET /sessions/{id}/transcript                 |
+    |  - POST /sessions/{id}/turn/stream (SSE)         |
+    |                                                  |
+    |  Features:                                       |
+    |  - Request validation (Pydantic)                 |
+    |  - Dependency injection                          |
+    |  - Auto-generated docs                           |
+    +--------------------------------------------------+
+            |                           |
+            | Database queries          | Agent calls
+            v                           v
+    +-----------------+        +----------------------+
+    |  SQLite DB      |        |   Tutoring Agent     |
+    |                 |        |                      |
+    |  - problems     |        |  - Think-Act-Observe |
+    |  - sessions     |        |  - Tool execution    |
+    |  - turns        |        |  - Error recovery    |
+    |  - hints_given  |        +----------------------+
+    |  - verifier_    |                    |
+    |    flags        |                    | LLM calls
+    +-----------------+                    v
+                                   +----------------------+
+                                   |     Groq API         |
+                                   | (openai/gpt-oss-120b)|
+                                   +----------------------+
+```
+
+---
+
+## Next: Day 3 - Durable Execution (Optional)
+
+**Note:** Based on project requirements, we should focus 80% on AI/agent layer, 20% on scaffolding.
+
+**Options:**
+1. Skip Day 3 (background jobs) - Go directly to Day 4 (Multi-agent with LangChain)
+2. Do simplified Day 3 - Basic retry logic only, skip queue system
+3. Stay on agent improvements - Enhance current agent before adding complexity
+
+**Recommended:** Go to Day 4 (Multi-agent layer) - This is the core AI deliverable.

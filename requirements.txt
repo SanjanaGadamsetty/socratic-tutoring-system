@@ -1,24 +1,23 @@
-# ===== DAY 1 - Core packages (install these first) =====
+# ===== DAY 1 - Core packages =====
 groq
 python-dotenv
 pydantic>=2.0
 
 # ===== DAY 2 - Database & API =====
-# sqlalchemy
-# psycopg2-binary
-# fastapi
-# uvicorn
-# sse-starlette
+sqlalchemy>=2.0
+fastapi>=0.104
+uvicorn>=0.24
+sse-starlette>=1.8
 
-# ===== DAY 4 - LangChain (we'll add these later) =====
+# ===== DAY 4 - LangChain (add later) =====
 # langchain
 # langchain-groq
 # langgraph
 
-# ===== BONUS - PDF processing (add when needed) =====
+# ===== BONUS - PDF processing (add later) =====
 # pypdf2
 # sentence-transformers
 # chromadb
 
 # ===== Utilities =====
-# requests
+requests>=2.31
