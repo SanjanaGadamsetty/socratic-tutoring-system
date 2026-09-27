@@ -13,7 +13,7 @@ import shutil
 import uuid
 from datetime import datetime
 from typing import List
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
@@ -31,7 +31,9 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @router.post("/upload")
 async def upload_pdf(
     file: UploadFile = File(...),
-    student_id: str = "anonymous",
+    title: str = Form(...),
+    description: str = Form(None),
+    student_id: str = Form("anonymous"),
     db: Session = Depends(get_db)
 ):
     """
@@ -74,6 +76,8 @@ async def upload_pdf(
 
         # Create database record
         pdf_doc = PDFDocument(
+            title=title,
+            description=description,
             filename=filename,
             original_filename=file.filename,
             file_path=file_path,

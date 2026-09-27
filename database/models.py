@@ -213,6 +213,8 @@ class PDFDocument(Base):
     __tablename__ = "pdf_documents"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(255), nullable=True)  # User-provided title
+    description = Column(Text, nullable=True)  # User-provided description
     filename = Column(String(255), nullable=False)
     original_filename = Column(String(255), nullable=False)  # User's original filename
     file_path = Column(String(500), nullable=False)  # Where PDF is stored

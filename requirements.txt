@@ -9,6 +9,7 @@ psycopg2-binary>=2.9  # PostgreSQL driver for Supabase
 fastapi>=0.104
 uvicorn>=0.24
 sse-starlette>=1.8
+python-multipart>=0.0.9  # Required for file uploads (Form data)
 
 # ===== DAY 4 - LangChain =====
 langchain>=0.3.0
@@ -23,3 +24,6 @@ pypdf>=6.0
 
 # ===== Utilities =====
 requests>=2.31
+
+# ===== Production Server =====
+gunicorn>=21.0  # Production WSGI server

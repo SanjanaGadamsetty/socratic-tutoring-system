@@ -34,7 +34,8 @@ class Speaker(str, Enum):
 
 class SessionStartRequest(BaseModel):
     """Request to start a new tutoring session"""
-    problem_id: int = Field(..., description="ID of the problem to work on", gt=0)
+    problem_id: Optional[int] = Field(None, description="ID of the problem to work on", gt=0)
+    pdf_document_id: Optional[int] = Field(None, description="ID of the PDF document to work on", gt=0)
     student_id: str = Field(..., description="Student identifier", min_length=1)
 
     class Config:

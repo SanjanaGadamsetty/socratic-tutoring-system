@@ -25,6 +25,12 @@ if not DATABASE_URL:
     db_path = pathlib.Path(__file__).parent / "socratic_tutoring.db"
     DATABASE_URL = f"sqlite:///{db_path}"
     print(f"[DATABASE] Using local SQLite: {db_path}")
+else:
+    # Fix PostgreSQL URL to use psycopg2 driver
+    # SQLAlchemy 2.0+ defaults to psycopg3, but we have psycopg2-binary installed
+    if DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+        print(f"[DATABASE] Using PostgreSQL with psycopg2 driver")
 
 # Create engine (the connection to the database)
 # echo=True means SQLAlchemy will print all SQL queries (helpful for learning!)

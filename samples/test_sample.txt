@@ -1,0 +1,10 @@
+Test Study Material
+
+This is a simple test document about mathematics.
+
+Key concepts:
+- Addition combines numbers
+- Multiplication is repeated addition
+- Division splits numbers into equal parts
+
+Example: 5 + 5 + 5 = 15, which is the same as 5 × 3 = 15

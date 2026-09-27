@@ -23,10 +23,10 @@ from app.api.schemas import (
 )
 from database.models import (
     Problem, Session as DBSession, Turn, HintGiven,
-    VerifierFlag, SessionStatus, Speaker
+    VerifierFlag, SessionStatus, Speaker, PDFDocument
 )
 from database.connection import get_db
-from app.agent import TutoringAgent
+from app.agents.handoff import HandoffController
 from app.api.streaming import router as streaming_router
 from app.api.jobs import router as jobs_router
 from app.api.pdfs import router as pdfs_router
@@ -95,33 +95,59 @@ def start_session(
     db: Session = Depends(get_db)
 ):
     """
-    Start a new tutoring session for a student on a specific problem.
+    Start a new tutoring session for a student on a specific problem or PDF.
 
     Flow:
-        1. Validate problem exists
+        1. Validate problem or PDF exists
         2. Create session in database
-        3. Initialize agent with problem context
+        3. Initialize agent with context
         4. Generate first Socratic question
         5. Save first turn to database
         6. Return session ID + first question
 
     Args:
-        request: Contains problem_id and student_id
+        request: Contains problem_id or pdf_document_id, and student_id
 
     Returns:
-        Session ID, problem details, and first tutor question
+        Session ID, context details, and first tutor question
     """
-    # Step 1: Check if problem exists
-    problem = db.query(Problem).filter(Problem.id == request.problem_id).first()
-    if not problem:
+    # Validate: must have either problem_id or pdf_document_id
+    if not request.problem_id and not request.pdf_document_id:
         raise HTTPException(
-            status_code=404,
-            detail=f"Problem with ID {request.problem_id} not found"
+            status_code=400,
+            detail="Must provide either problem_id or pdf_document_id"
         )
+
+    if request.problem_id and request.pdf_document_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot provide both problem_id and pdf_document_id"
+        )
+
+    problem = None
+    pdf_doc = None
+
+    # Step 1: Check if problem or PDF exists
+    if request.problem_id:
+        problem = db.query(Problem).filter(Problem.id == request.problem_id).first()
+        if not problem:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Problem with ID {request.problem_id} not found"
+            )
+
+    if request.pdf_document_id:
+        pdf_doc = db.query(PDFDocument).filter(PDFDocument.id == request.pdf_document_id).first()
+        if not pdf_doc:
+            raise HTTPException(
+                status_code=404,
+                detail=f"PDF document with ID {request.pdf_document_id} not found"
+            )
 
     # Step 2: Create session
     session = DBSession(
         problem_id=request.problem_id,
+        pdf_document_id=request.pdf_document_id,
         student_id=request.student_id,
         status=SessionStatus.IN_PROGRESS
     )
@@ -129,19 +155,19 @@ def start_session(
     db.commit()
     db.refresh(session)  # Get auto-generated ID
 
-    # Step 3: Initialize agent with problem context
-    agent = TutoringAgent()
+    # Step 3: Generate first Socratic question
+    # Use simple template for now (fast and reliable)
+    print("[INFO] Generating first question...")
 
-    # Step 4: Generate first Socratic question
-    prompt = f"""You are starting a Socratic tutoring session.
+    if problem:
+        # Problem-based: Ask about what they know about the topic
+        topic_words = problem.topic.split()[-1] if problem.topic else "this topic"
+        first_question = f"Let's work through this together! Before we start, what do you already know about {topic_words}?"
+    else:
+        # PDF-based: Ask what interests them
+        first_question = "I see you've uploaded study material. What topic from this document would you like to explore first?"
 
-Problem: {problem.problem_text}
-Correct Answer (DO NOT REVEAL): {problem.correct_answer}
-
-Generate your first Socratic question to guide the student toward understanding.
-Remember: ASK questions, don't give answers!"""
-
-    first_question = agent.run(prompt, max_iterations=2)
+    print(f"[INFO] First question ready: {first_question[:50]}...")
 
     # Step 5: Save first turn
     turn = Turn(
@@ -154,9 +180,21 @@ Remember: ASK questions, don't give answers!"""
     db.commit()
 
     # Step 6: Return response
+    # Create a mock problem response for PDF sessions
+    if problem:
+        problem_response = ProblemResponse.from_orm(problem)
+    else:
+        problem_response = ProblemResponse(
+            id=pdf_doc.id,
+            title=pdf_doc.title,
+            problem_text=pdf_doc.description or "PDF-based tutoring",
+            topic="PDF Document",
+            difficulty="medium"
+        )
+
     return SessionStartResponse(
         session_id=session.id,
-        problem=ProblemResponse.from_orm(problem),
+        problem=problem_response,
         first_question=first_question,
         status=session.status
     )
@@ -200,6 +238,7 @@ def submit_turn(
         raise HTTPException(status_code=404, detail="Session not found")
 
     problem = session.problem
+    pdf_doc = session.pdf_document
 
     # Step 2: Save student turn
     turn_number = db.query(Turn).filter(Turn.session_id == session_id).count() + 1
@@ -213,41 +252,70 @@ def submit_turn(
     db.add(student_turn)
     db.commit()
 
-    # Step 3: Check if answer is correct
-    is_correct = request.student_answer.strip().lower() == problem.correct_answer.strip().lower()
+    # Step 3: Get conversation history
+    previous_turns = db.query(Turn).filter(
+        Turn.session_id == session_id
+    ).order_by(Turn.turn_number).all()
 
-    if is_correct:
-        # Student got it right! End session
-        session.status = SessionStatus.COMPLETED
-        db.commit()
+    history = "\n".join([
+        f"{turn.speaker.value.upper()}: {turn.message}"
+        for turn in previous_turns
+    ])
 
-        tutor_response = "Excellent! You got it right! Great work using logical thinking to solve this problem."
+    # Step 4: Check if answer is correct (only for problem-based sessions)
+    is_correct = None
+    if problem:
+        is_correct = request.student_answer.strip().lower() == problem.correct_answer.strip().lower()
+
+        if is_correct:
+            # Student got it right! End session
+            session.status = SessionStatus.COMPLETED
+            db.commit()
+
+            tutor_response = "Excellent! You got it right! Great work using logical thinking to solve this problem."
+        else:
+            # Generate next Socratic question using TutorAgent (fast!)
+            try:
+                from app.agents.tutor_agent import TutorAgent
+                tutor = TutorAgent()
+
+                context = {
+                    "student_last_response": request.student_answer,
+                    "conversation_history": history,
+                    "problem_text": problem.problem_text,
+                    "correct_answer": problem.correct_answer
+                }
+
+                tutor_response = tutor.generate_response(context)
+
+                # Fallback if empty
+                if not tutor_response or len(tutor_response.strip()) < 10:
+                    tutor_response = "That's an interesting approach. Can you explain your thinking step by step?"
+
+            except Exception as e:
+                print(f"[WARNING] Tutor generation failed: {e}")
+                tutor_response = "Let me guide you with a question: What's the first step you would take to solve this?"
     else:
-        # Generate next Socratic question
-        agent = TutoringAgent()
+        # PDF-based session - no correct answer to check
+        try:
+            from app.agents.tutor_agent import TutorAgent
+            tutor = TutorAgent()
 
-        # Get conversation history
-        previous_turns = db.query(Turn).filter(
-            Turn.session_id == session_id
-        ).order_by(Turn.turn_number).all()
+            context = {
+                "student_last_response": request.student_answer,
+                "conversation_history": history,
+                "pdf_content": pdf_doc.extracted_text
+            }
 
-        history = "\n".join([
-            f"{turn.speaker.value.upper()}: {turn.message}"
-            for turn in previous_turns
-        ])
+            tutor_response = tutor.generate_response(context)
 
-        prompt = f"""You are continuing a Socratic tutoring session.
+            # Fallback if empty
+            if not tutor_response or len(tutor_response.strip()) < 10:
+                tutor_response = "That's interesting! Can you explain more about what you learned from the material?"
 
-Problem: {problem.problem_text}
-Correct Answer (DO NOT REVEAL): {problem.correct_answer}
-
-Conversation so far:
-{history}
-
-The student's latest answer is INCORRECT. Generate your next Socratic question to guide them closer to the answer.
-Remember: ASK guiding questions, don't reveal the answer!"""
-
-        tutor_response = agent.run(prompt, max_iterations=2)
+        except Exception as e:
+            print(f"[WARNING] Tutor generation failed: {e}")
+            tutor_response = "That's a good observation. What else stood out to you in the reading?"
 
     # Save tutor turn
     tutor_turn = Turn(
